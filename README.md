@@ -1,11 +1,11 @@
 
-## Introduction ##
+## Introduction
 Telegram dice expressions bot written in Go
 
-## Source ##
+## Source
 [Github repo](https://github.com/pconcepcion/telegram_dice_bot.git)
 
-## Dependencies  ##
+## Dependencies
 
 * [Cobra](https://github.com/spf13/cobra): A Commander for modern Go CLI interactions
   * [Pflag](https://github.com/spf13/pflag): Drop-in replacement for Go's flag package, implementing POSIX/GNU-style --flags.
@@ -15,7 +15,8 @@ Telegram dice expressions bot written in Go
 * [Telegram Bot API](https://github.com/go-telegram-bot-api/telegram-bot-api/):Golang bindings for the Telegram Bot API
 * [RPG Dice library](http://pconcepcion.github.io/dice/): Dice roll generators written in go
 
-## Configuration ## 
+## Configuration 
+
 The bot currently only needs one configuration parameter, the telegram api token, it can be set on the default config file  `$HOME/.telegram_dice_bot.yaml` (accets JSON, TOML, YAML, HCL, or Java properties file format): 
 
     --- 
@@ -25,8 +26,8 @@ or with the `TDB_API_TOKEN` environment variable
 
     export TDB_API_TOKEN="<YOUR API TOKEN HERE>"
  
-## Testing ##
+## Testing
 Improve tests
 
-## License ##
+## License
 * This code is released under the [BSD-3 Clause License](http://opensource.org/licenses/BSD-3-Clause)
