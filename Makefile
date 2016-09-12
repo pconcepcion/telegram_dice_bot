@@ -19,5 +19,5 @@ clean:
 deps: dev-deps
 
 dev-deps:
-	go get github.com/golang/lint/golint
-	go get github.com/kisielk/errcheck
+	go get -u github.com/golang/lint/golint
+	go get -u github.com/kisielk/errcheck
