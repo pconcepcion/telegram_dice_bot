@@ -28,10 +28,31 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package cmd
 
-import "github.com/pconcepcion/telegram_dice_bot/cmd"
+import (
+	"github.com/pconcepcion/telegram_dice_bot/bot"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
 
-func main() {
-	cmd.Execute()
+// runCmd represents the run command
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "A brief description of your command",
+	Long: `A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
+
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		bot.Run()
+	},
+}
+
+func init() {
+	RootCmd.AddCommand(runCmd)
+	runCmd.Flags().String("api_token", "", "Telegram API Token")
+	viper.BindPFlag("api_token", runCmd.Flags().Lookup("api_token"))
 }

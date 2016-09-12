@@ -28,10 +28,47 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package cmd
 
-import "github.com/pconcepcion/telegram_dice_bot/cmd"
+import (
+	"fmt"
 
-func main() {
-	cmd.Execute()
+	"github.com/spf13/cobra"
+)
+
+var version = "0.1.0"
+
+// BuildDate to show in the version command, should be set at build time (see Makefile)
+var BuildDate = "unknown"
+
+// CommitHash to show in the version command, should be set at build time (see Makefile)
+var CommitHash = "unknown"
+
+// versionCmd represents the version command
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Show the version information and exit",
+	Long: `Shows the version information including:
+  - semver version number
+  - git commit hash
+  - build date`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// TODO: Work your own magic here
+		fmt.Println("version ", version, "commit ", CommitHash, "build date ", BuildDate)
+	},
+}
+
+func init() {
+	RootCmd.AddCommand(versionCmd)
+
+	// Here you will define your flags and configuration settings.
+
+	// Cobra supports Persistent Flags which will work for this command
+	// and all subcommands, e.g.:
+	// versionCmd.PersistentFlags().String("foo", "", "A help for foo")
+
+	// Cobra supports local flags which will only run when this command
+	// is called directly, e.g.:
+	// versionCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
 }

@@ -28,10 +28,37 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package main
+package cmd
 
-import "github.com/pconcepcion/telegram_dice_bot/cmd"
+import (
+	"fmt"
 
-func main() {
-	cmd.Execute()
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+// configCmd represents the config command
+var configCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Shows the bot configuration",
+	Long: `Shows the bot current configuration as defined on the config file and the
+  environment varialbes.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("config called")
+	},
+}
+
+func init() {
+	configCmd.RunE = config
+	RootCmd.AddCommand(configCmd)
+}
+
+func config(cmd *cobra.Command, args []string) error {
+
+	fmt.Printf("Current loaded settings: \n\n")
+	allKeys := viper.AllSettings()
+	for k, v := range allKeys {
+		fmt.Printf("%s = %v\n", k, v)
+	}
+	return nil
 }
