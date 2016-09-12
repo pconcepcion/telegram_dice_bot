@@ -40,6 +40,9 @@ import (
 
 var cfgFile string
 
+// Verbose defines if the output log should be verbose
+var Verbose bool
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "telegram_dice_bot",
@@ -69,6 +72,8 @@ func init() {
 
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.telegram_dice_bot.yaml)")
 	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+	viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose"))
+
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -79,10 +84,17 @@ func initConfig() {
 
 	viper.SetConfigName(".telegram_dice_bot") // name of config file (without extension)
 	viper.AddConfigPath("$HOME")              // adding home directory as first search path
+	viper.SetEnvPrefix("tdb")                 // Env variables will start with TDB_
 	viper.AutomaticEnv()                      // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	} else {
+		if Verbose {
+			fmt.Printf("No config file found:\n%s\n", err)
+		} else {
+			fmt.Println("No config file found")
+		}
 	}
 }

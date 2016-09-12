@@ -2,17 +2,15 @@ package bot
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	"github.com/pconcepcion/dice"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
-)
-
-const (
-	apiToken = "YOUR API TOKEN HERE"
 )
 
 var log = logrus.New()
@@ -23,6 +21,12 @@ func init() {
 
 }
 
+var apiToken string
+
+func getAPIToken() {
+	apiToken = viper.GetString("api_token")
+}
+
 // roll the dice expession contained on the message
 func roll(message string) (rpg.DiceExpressionResult, error) {
 	toRoll := rpg.NewSimpleDiceExpression(message)
@@ -31,10 +35,15 @@ func roll(message string) (rpg.DiceExpressionResult, error) {
 
 // Do the authorization of the bot and set the bot mode
 func authorizeBot(debug bool) *tgbotapi.BotAPI {
-	log.Printf("Authorizing bog with token %s", apiToken)
+	getAPIToken()
+	if apiToken == "" {
+		log.Error("API Token not found")
+		os.Exit(-1)
+	}
+	log.Printf("Authorizing bot with token %s", apiToken)
 	bot, err := tgbotapi.NewBotAPI(apiToken)
 	if err != nil {
-		log.Panic(errors.Wrap(err, "Couldn't acces the API wiht token "+apiToken))
+		log.Panic(errors.Wrap(err, "Couldn't access the API with token "+apiToken))
 	}
 
 	bot.Debug = debug
@@ -46,6 +55,7 @@ func authorizeBot(debug bool) *tgbotapi.BotAPI {
 
 }
 
+// Run launches the bot, does the authorization process and starts to listen for messages
 func Run() {
 	// Athorize the bot with deboug mode
 	bot := authorizeBot(true)
@@ -73,6 +83,8 @@ func Run() {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, response)
 		msg.ReplyToMessageID = update.Message.MessageID
 
-		bot.Send(msg)
+		if _, sendErr := bot.Send(msg); sendErr != nil {
+			log.Error(sendErr)
+		}
 	}
 }

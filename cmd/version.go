@@ -37,7 +37,11 @@ import (
 )
 
 var version = "0.1.0"
+
+// BuildDate to show in the version command, should be set at build time (see Makefile)
 var BuildDate = "unknown"
+
+// CommitHash to show in the version command, should be set at build time (see Makefile)
 var CommitHash = "unknown"
 
 // versionCmd represents the version command
