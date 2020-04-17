@@ -10,7 +10,7 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	rpg "github.com/pconcepcion/dice"
-	tgbotapi "gopkg.in/telegram-bot-api.v4"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 var log = logrus.New()
@@ -128,8 +128,8 @@ func Run() {
 		}
 
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-		log.Printf("---\n%+v\n---", update.Message)
-		log.Printf("---\n%+v\n---", update.Message.Chat)
+		log.Debugf("---\n%+v\n---", update.Message)
+		log.Debugf("---\n%+v\n---", update.Message.Chat)
 		response := handleMessage(update.Message)
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, response)
 		msg.ReplyToMessageID = update.Message.MessageID
