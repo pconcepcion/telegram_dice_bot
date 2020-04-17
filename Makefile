@@ -4,6 +4,9 @@ build:
 install:
 	go install
 
+goformat:
+	go fmt ./...
+
 test:
 	go test -v -race ./...
 
