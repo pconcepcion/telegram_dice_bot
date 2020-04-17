@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/viper"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
-	"github.com/pconcepcion/dice"
+	rpg "github.com/pconcepcion/dice"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
@@ -28,8 +28,8 @@ func getAPIToken() {
 }
 
 // roll the dice expession contained on the message
-func roll(message string) (rpg.DiceExpressionResult, error) {
-	toRoll := rpg.NewSimpleDiceExpression(message)
+func roll(message string) (rpg.ExpressionResult, error) {
+	toRoll := rpg.NewSimpleExpression(message)
 	return toRoll.Roll()
 }
 
@@ -56,7 +56,8 @@ func authorizeBot(debug bool) *tgbotapi.BotAPI {
 }
 
 func handleMessage(m *tgbotapi.Message) string {
-	var response string = "Unknown command"
+	// TODO: Handle extra argument for the roll identifier: example "/d100 hide"
+	var response = "Unknown command"
 	log.Infof("Bot command: %v, arguments %v", m.Command(), m.CommandArguments())
 	switch m.Command() {
 	// Dice expression
@@ -66,9 +67,11 @@ func handleMessage(m *tgbotapi.Message) string {
 		if err != nil {
 			// TODO: handle the error gracefully
 			log.Error(err)
+			response = "Dice expression Error"
+		} else {
+			response = fmt.Sprintf("%s: %v -> %s", diceExpression, dicesResult.GetResults(), dicesResult)
 		}
-		response = fmt.Sprintf("%s: %v -> %s", diceExpression, dicesResult.GetResults(), dicesResult)
-		// Basic dices
+	// Basic dices
 	case "d2":
 		response = fmt.Sprintf("d2 -> %d", rpg.D2())
 	case "d4":
@@ -85,6 +88,17 @@ func handleMessage(m *tgbotapi.Message) string {
 		response = fmt.Sprintf("d20 -> %d", rpg.D20())
 	case "d100":
 		response = fmt.Sprintf("d100 -> %d", rpg.D100())
+	// Session Handling
+	case "startSession":
+		response =fmt.Sprintf("Starting Session: %s", m.CommandArguments)
+		log.Info(response)
+		// TODO: Store session info
+		// TODO: Set session timeout
+	case "endSession":
+		// TODO: Close session and add info on which session is closed
+		response ="Session End" 
+		log.Info(response)
+
 	}
 	return response
 }
