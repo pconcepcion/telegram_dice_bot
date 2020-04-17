@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
-	rpg "github.com/pconcepcion/dice"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	rpg "github.com/pconcepcion/dice"
+	//valid "github.com/asaskevich/govalidator"
 )
 
 var log = logrus.New()
 
 func init() {
-	log.Formatter = new(prefixed.TextFormatter)
+	log.Formatter = &logrus.TextFormatter{DisableLevelTruncation: true, FullTimestamp: true, PadLevelText: true}
 	log.Level = logrus.DebugLevel
 
 }
@@ -90,13 +90,13 @@ func handleMessage(m *tgbotapi.Message) string {
 		response = fmt.Sprintf("d100 -> %d", rpg.D100())
 	// Session Handling
 	case "startSession":
-		response =fmt.Sprintf("Starting Session: %s", m.CommandArguments)
+		response = fmt.Sprintf("Starting Session: %s", m.CommandArguments)
 		log.Info(response)
 		// TODO: Store session info
 		// TODO: Set session timeout
 	case "endSession":
 		// TODO: Close session and add info on which session is closed
-		response ="Session End" 
+		response = "Session End"
 		log.Info(response)
 
 	}
