@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	rpg "github.com/pconcepcion/dice"
+	storage "github.com/pconcepcion/telegram_dice_bot/storage"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	rpg "github.com/pconcepcion/dice"
 	//valid "github.com/asaskevich/govalidator"
 )
 
@@ -90,7 +90,13 @@ func handleMessage(m *tgbotapi.Message) string {
 		response = fmt.Sprintf("d100 -> %d", rpg.D100())
 	// Session Handling
 	case "startSession":
-		response = fmt.Sprintf("Starting Session: %s", m.CommandArguments)
+		sessionName , err := storage.StartSession(m.CommandArguments()) 
+		if err != nil {
+			response = fmt.Sprintf("Failed to create Session, invalid session name")
+			log.Errorf("Failed to create Session, invalid session arguments: %s", m.CommandArguments())
+			return response	
+		}
+		response = fmt.Sprintf("Starting Session: %s", sessionName)
 		log.Info(response)
 		// TODO: Store session info
 		// TODO: Set session timeout
