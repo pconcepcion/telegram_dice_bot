@@ -2,12 +2,13 @@ package storage
 
 import (
 	"errors"
+
 	valid "github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 )
 
-// Character reprents a game character
+// Character database model that reprents a game character
 type Character struct {
 	gorm.Model
 	UUID          uuid.UUID
@@ -15,7 +16,7 @@ type Character struct {
 	Color         string `valid:"hexcolor,required"`
 }
 
-// Player represents a player in the game that can manage several Characters
+// Player database model that represents a player in the game that can manage several Characters
 type Player struct {
 	gorm.Model
 	UUID       uuid.UUID
@@ -26,12 +27,18 @@ type Player struct {
 }
 
 const (
+	// MinCharacterNameLength minimum length for the Character name
 	MinCharacterNameLength = 2
+	// MaxCharacterNameLength maximum length for the Character name
 	MaxCharacterNameLength = 32
-	MinPlayerNameLength    = 2
-	MaxPlayerNameLength    = 32
-	MinUsernameLength      = 2
-	MaxUsernameNameLength  = 32
+	// MinPlayerNameLength minimum length for the Player name
+	MinPlayerNameLength = 2
+	// MaxPlayerNameLength maximum length for the Player name
+	MaxPlayerNameLength = 32
+	// MinUsernameLength minimum length for the Username
+	MinUsernameLength = 2
+	// MaxUsernameNameLength maximum length for the Username
+	MaxUsernameNameLength = 32
 )
 
 // RegisterPlayer register the data about a player
@@ -42,9 +49,8 @@ func RegisterPlayer(name string, username string, color string) (*Player, error)
 		player := Player{UUID: uuid.New(), Name: trimedname, UserName: username}
 		log.Infof("Registered Player: %v", player)
 		return &player, nil
-	} else {
-		return nil, errors.New("Invalid Player Name")
 	}
+	return nil, errors.New("Invalid Player Name")
 }
 
 // RegisterCharacter register a Character controled by a player
@@ -54,7 +60,6 @@ func (*Player) RegisterCharacter(charactername string, color string) (*Character
 		character := Character{UUID: uuid.New(), CharacterName: trimedname}
 		log.Infof("Registered Character: %v", character)
 		return &character, nil
-	} else {
-		return nil, errors.New("Invalid Character Name")
 	}
+	return nil, errors.New("Invalid Character Name")
 }

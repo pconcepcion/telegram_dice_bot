@@ -2,13 +2,15 @@ package storage
 
 import (
 	"errors"
+	"time"
+
 	valid "github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
-	"time"
 )
 
-// Session stores information on the game session, including an UUID, a name and a Starting time for the Session
+// Session  database model that stores information on the game session,
+// including an UUID, a name and a Starting time for the Session
 type Session struct {
 	gorm.Model
 	UUID     uuid.UUID
@@ -18,7 +20,9 @@ type Session struct {
 }
 
 const (
+	// MinSessionNameLength minimum length for the Session name
 	MinSessionNameLength = 2
+	// MaxSessionNameLength maximum length for the Session name
 	MaxSessionNameLength = 32
 )
 
@@ -31,9 +35,8 @@ func StartSession(name string) (*Session, error) {
 		db.Create(session)
 		// TODO: Set as active session
 		return &session, nil
-	} else {
-		return nil, errors.New("Invalid Session Name")
 	}
+	return nil, errors.New("Invalid Session Name")
 }
 
 // EndSession stores the end time for the session and unset it as the active session

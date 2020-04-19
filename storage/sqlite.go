@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/jinzhu/gorm"
+	// sqlite dialect for the gorm package
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/sirupsen/logrus"
 	//	bot "github.com/pconcepcion/telegram_dice_bot/bot"
@@ -15,6 +16,7 @@ func init() {
 
 }
 
+// Roll database model to sotre a single dice expression roll
 type Roll struct {
 	gorm.Model
 	DiceExpression string
