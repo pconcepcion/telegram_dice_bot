@@ -3,7 +3,7 @@ package storage
 import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-		"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	//	bot "github.com/pconcepcion/telegram_dice_bot/bot"
 )
 
@@ -23,6 +23,10 @@ type Roll struct {
 	FinalResult    uint32
 }
 
+var (
+	db *gorm.DB
+)
+
 func main() {
 	db, err := gorm.Open("sqlite3", "telagram_dice_bot.db")
 	if err != nil {
@@ -32,6 +36,13 @@ func main() {
 
 	// Migrate the schema
 	db.AutoMigrate(&Roll{})
+	db.AutoMigrate(&Session{})
+	db.AutoMigrate(&Player{})
+	db.AutoMigrate(&Character{})
+
+	// Create Indexes
+	db.Model(&Player{}).AddIndex("idx_player_name", "name")
+	db.Model(&Character{}).AddIndex("idx_character_name", "name")
 
 	// Create
 	//db.Create(&Product{Code: "L1212", Price: 1000})

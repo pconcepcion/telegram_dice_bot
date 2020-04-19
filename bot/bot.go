@@ -90,15 +90,15 @@ func handleMessage(m *tgbotapi.Message) string {
 		response = fmt.Sprintf("d100 -> %d", rpg.D100())
 	// Session Handling
 	case "startSession":
-		sessionName , err := storage.StartSession(m.CommandArguments()) 
+		// Store Session info
+		sessionName, err := storage.StartSession(m.CommandArguments())
 		if err != nil {
 			response = fmt.Sprintf("Failed to create Session, invalid session name")
 			log.Errorf("Failed to create Session, invalid session arguments: %s", m.CommandArguments())
-			return response	
+			return response
 		}
 		response = fmt.Sprintf("Starting Session: %s", sessionName)
 		log.Info(response)
-		// TODO: Store session info
 		// TODO: Set session timeout
 	case "endSession":
 		// TODO: Close session and add info on which session is closed
