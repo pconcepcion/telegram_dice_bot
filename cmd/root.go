@@ -79,13 +79,19 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" { // enable ability to specify config file via flag
-		viper.SetConfigFile(cfgFile)
-	}
-
-	viper.SetConfigName(".telegram_dice_bot") // name of config file (without extension)
+		fmt.Println("Setting config file", cfgFile)
+    viper.SetConfigName(cfgFile) // name of config file (without extension)
+	} else {
+		viper.SetConfigName(".telegram_dice_bot") // name of config file (without extension)
+  }
+  viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
+  viper.AddConfigPath("/etc/telegram_dice_bot/")   // path to look for the config file in
 	viper.AddConfigPath("$HOME")              // adding home directory as first search path
-	viper.SetEnvPrefix("tdb")                 // Env variables will start with TDB_
-	viper.AutomaticEnv()                      // read in environment variables that match
+  viper.AddConfigPath("$HOME/.telegram_dice_bot")  // call multiple times to add many search paths
+  viper.AddConfigPath(".")               // optionally look for config in the working directory
+	viper.SetEnvPrefix("tdb") // Env variables will start with TDB_
+	viper.AutomaticEnv()      // read in environment variables that match
+
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
