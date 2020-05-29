@@ -15,6 +15,10 @@ import (
 
 var log = logrus.New()
 
+const (
+  apiTokenMinLength = 5
+)
+
 func init() {
 	log.Formatter = &logrus.TextFormatter{DisableLevelTruncation: true, FullTimestamp: true, PadLevelText: true}
 	log.Level = logrus.DebugLevel
@@ -36,14 +40,15 @@ func roll(message string) (rpg.ExpressionResult, error) {
 // Do the authorization of the bot and set the bot mode
 func authorizeBot(debug bool) *tgbotapi.BotAPI {
 	getAPIToken()
-	if apiToken == "" {
+	if apiToken == "" || len(apiToken) < apiTokenMinLength {
 		log.Error("API Token not found")
 		os.Exit(-1)
 	}
-	log.Printf("Authorizing bot with token %s", apiToken)
+	log.Printf("Authorizing bot with token starting with '%s'", apiToken[0:3])
 	bot, err := tgbotapi.NewBotAPI(apiToken)
 	if err != nil {
-		log.Panic(errors.Wrap(err, "Couldn't access the API with token "+apiToken))
+    errorMsg := fmt.Sprintf("Couldn't access the API with token starting with '%s'", apiToken[0:3])
+		log.Panic(errors.Wrap(err, errorMsg))
 	}
 
 	bot.Debug = debug
@@ -58,6 +63,7 @@ func authorizeBot(debug bool) *tgbotapi.BotAPI {
 func handleMessage(m *tgbotapi.Message) string {
 	// TODO: Handle extra argument for the roll identifier: example "/d100 hide"
 	var response = "Unknown command"
+  log.Debugf("Bot received command: %v", m)
 	log.Infof("Bot command: %v, arguments %v", m.Command(), m.CommandArguments())
 	switch m.Command() {
 	// Dice expression
@@ -111,7 +117,7 @@ func handleMessage(m *tgbotapi.Message) string {
 
 // Run launches the bot, does the authorization process and starts to listen for messages
 func Run() {
-	// Athorize the bot with deboug mode
+	// Athorize the bot with debug mode
 	bot := authorizeBot(true)
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 30
