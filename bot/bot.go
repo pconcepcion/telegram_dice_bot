@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"os"
+  "strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	rpg "github.com/pconcepcion/dice"
@@ -60,6 +61,27 @@ func authorizeBot(debug bool) *tgbotapi.BotAPI {
 
 }
 
+// separates the dice expression and the following roll message on the first space
+func separateExressionAndRollMessage(arguments string) (expression, rollMessage string, err error) {
+  // TODO: Add some validation
+  splitted := strings.SplitAfterN(arguments, " ", 2)
+  expression = splitted[0]
+  // If there was a message get it
+  if len(splitted) > 1 {
+    rollMessage = splitted[1]
+  }
+  return expression, rollMessage, nil
+}
+
+func composeResponse(user *tgbotapi.User, diceExpression, rollMessage string, result rpg.ExpressionResult) string {
+
+  message := fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* \u27A1 _%s_",
+    user.UserName, user.ID, diceExpression, result.GetResults(), result, rollMessage)
+
+  return message
+
+}
+
 func handleMessage(m *tgbotapi.Message) string {
 	// TODO: Handle extra argument for the roll identifier: example "/d100 hide"
 	var response = "Unknown command"
@@ -68,48 +90,55 @@ func handleMessage(m *tgbotapi.Message) string {
 	switch m.Command() {
 	// Dice expression
 	case "de":
-		diceExpression := m.CommandArguments()
+    diceExpression, rollMessage , err := separateExressionAndRollMessage(m.CommandArguments())
+    if err != nil {
+			// TODO: handle the error gracefully
+			return "Dice expression Error"
+    }
 		dicesResult, err := roll(diceExpression)
 		if err != nil {
 			// TODO: handle the error gracefully
 			log.Error(err)
-			response = "Dice expression Error"
-		} else {
-			response = fmt.Sprintf("%s: %v -> %s", diceExpression, dicesResult.GetResults(), dicesResult)
+			 return "Dice expression Error"
 		}
+		response = composeResponse(m.From, diceExpression, rollMessage, dicesResult)
 	// Basic dices
 	case "d2":
-		response = fmt.Sprintf("d2 -> %d", rpg.D2())
+		response = fmt.Sprintf("d2 \u27A1 %d", rpg.D2())
 	case "d4":
-		response = fmt.Sprintf("d4 -> %d", rpg.D4())
+		response = fmt.Sprintf("d4 \u27A1 %d", rpg.D4())
 	case "d6":
-		response = fmt.Sprintf("d6 -> %d", rpg.D6())
+		response = fmt.Sprintf("d6 \u27A1 %d", rpg.D6())
 	case "d8":
-		response = fmt.Sprintf("d8 -> %d", rpg.D8())
+		response = fmt.Sprintf("d8 \u27A1 %d", rpg.D8())
 	case "d10":
-		response = fmt.Sprintf("d10 -> %d", rpg.D10())
+		response = fmt.Sprintf("d10 \u27A1 %d", rpg.D10())
 	case "d12":
-		response = fmt.Sprintf("d12 -> %d", rpg.D12())
+		response = fmt.Sprintf("d12 \u27A1 %d", rpg.D12())
 	case "d20":
-		response = fmt.Sprintf("d20 -> %d", rpg.D20())
+		response = fmt.Sprintf("d20 \u27A1 %d", rpg.D20())
 	case "d100":
-		response = fmt.Sprintf("d100 -> %d", rpg.D100())
+		response = fmt.Sprintf("d100 \u27A1 %d", rpg.D100())
 	// Session Handling
 	case "startSession":
 		// Store Session info
+    response = fmt.Sprintf("Creating Session: \n \U0001F3F7  *_%s_*", m.CommandArguments())
+		log.Info(response)
+    return response
+    // TODO fix the session storage
 		sessionName, err := storage.StartSession(m.CommandArguments())
 		if err != nil {
 			response = fmt.Sprintf("Failed to create Session, invalid session name")
 			log.Errorf("Failed to create Session, invalid session arguments: %s", m.CommandArguments())
 			return response
 		}
-		response = fmt.Sprintf("Starting Session: %s", sessionName)
-		log.Info(response)
+    response = fmt.Sprintf("Starting Session: \n \U0001F3F7  *_%s_*", sessionName)
 		// TODO: Set session timeout
 	case "endSession":
 		// TODO: Close session and add info on which session is closed
-		response = "Session End"
+		response = "\U0001F51A Session End"
 		log.Info(response)
+    return response
 
 	}
 	return response
@@ -144,6 +173,7 @@ func Run() {
 		log.Debugf("---\n%+v\n---", update.Message.Chat)
 		response := handleMessage(update.Message)
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, response)
+    msg.ParseMode = "MarkdownV2"
 		msg.ReplyToMessageID = update.Message.MessageID
 
 		if _, sendErr := bot.Send(msg); sendErr != nil {
