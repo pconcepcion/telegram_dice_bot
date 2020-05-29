@@ -43,6 +43,9 @@ var cfgFile string
 // Verbose defines if the output log should be verbose
 var Verbose bool
 
+// Storage holds the backend storage access string
+var Storage string
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "telegram_dice_bot",
@@ -74,24 +77,26 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 	viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose"))
 
+	// storage
+	RootCmd.PersistentFlags().StringVarP(&Storage, "storage", "s", "sqlite://telegram_bot_api.sqlite", "Storage backend")
+	viper.BindPFlag("storage", RootCmd.PersistentFlags().Lookup("storage"))
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" { // enable ability to specify config file via flag
 		fmt.Println("Setting config file", cfgFile)
-    viper.SetConfigName(cfgFile) // name of config file (without extension)
+		viper.SetConfigName(cfgFile) // name of config file (without extension)
 	} else {
 		viper.SetConfigName(".telegram_dice_bot") // name of config file (without extension)
-  }
-  viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
-  viper.AddConfigPath("/etc/telegram_dice_bot/")   // path to look for the config file in
-	viper.AddConfigPath("$HOME")              // adding home directory as first search path
-  viper.AddConfigPath("$HOME/.telegram_dice_bot")  // call multiple times to add many search paths
-  viper.AddConfigPath(".")               // optionally look for config in the working directory
-	viper.SetEnvPrefix("tdb") // Env variables will start with TDB_
-	viper.AutomaticEnv()      // read in environment variables that match
-
+	}
+	viper.SetConfigType("yaml")                     // REQUIRED if the config file does not have the extension in the name
+	viper.AddConfigPath("/etc/telegram_dice_bot/")  // path to look for the config file in
+	viper.AddConfigPath("$HOME")                    // adding home directory as first search path
+	viper.AddConfigPath("$HOME/.telegram_dice_bot") // call multiple times to add many search paths
+	viper.AddConfigPath(".")                        // optionally look for config in the working directory
+	viper.SetEnvPrefix("tdb")                       // Env variables will start with TDB_
+	viper.AutomaticEnv()                            // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

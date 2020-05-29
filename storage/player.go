@@ -24,7 +24,16 @@ type Player struct {
 	UserName   string      `valid:"alphanum,required,runelength(2|32)"`
 	Color      string      `valid:"hexcolor,required"`
 	Characters []Character ``
+	Rolls      []Roll      `gorm:"foreignkey:PlayerUUID"`
 }
+
+// Errors
+var (
+	// ErrInvalidCharacterName
+	ErrInvalidCharacterName = errors.New("Invalid Character Name")
+	// ErrInvalidPlayerName
+	ErrInvalidPlayerName = errors.New("Invalid Player Name")
+)
 
 const (
 	// MinCharacterNameLength minimum length for the Character name
@@ -41,25 +50,31 @@ const (
 	MaxUsernameNameLength = 32
 )
 
-// RegisterPlayer register the data about a player
-func RegisterPlayer(name string, username string, color string) (*Player, error) {
+// NewPlayer creates a new player
+func (sqliteStorage SQLiteStorage) NewPlayer(name string, username string, color string) (*Player, error) {
 	trimedname := valid.Trim(name, "") // Remove starting an tailing whitespace
 	// TODO: finish validations
 	if valid.IsAlphanumeric(trimedname) && len(trimedname) <= MaxSessionNameLength && len(trimedname) >= MinSessionNameLength {
 		player := Player{UUID: uuid.New(), Name: trimedname, UserName: username}
+		sqliteStorage.db.Save(player)
 		log.Infof("Registered Player: %v", player)
 		return &player, nil
 	}
-	return nil, errors.New("Invalid Player Name")
+	return nil, ErrInvalidPlayerName
 }
 
 // RegisterCharacter register a Character controled by a player
-func (*Player) RegisterCharacter(charactername string, color string) (*Character, error) {
-	trimedname := valid.Trim(charactername, "") // Remove starting an tailing whitespace
-	if valid.IsAlphanumeric(trimedname) && len(trimedname) <= MaxSessionNameLength && len(trimedname) >= MinSessionNameLength {
-		character := Character{UUID: uuid.New(), CharacterName: trimedname}
-		log.Infof("Registered Character: %v", character)
+func (sqliteStorage SQLiteStorage) RegisterCharacter(p *Player, charactername string, color string) (*Character, error) {
+	trimedCharactername := valid.Trim(charactername, "") // Remove starting an tailing whitespace
+	trimedColor := valid.Trim(color, "")
+	if valid.IsAlphanumeric(trimedCharactername) && len(trimedCharactername) <= MaxSessionNameLength &&
+		len(trimedCharactername) >= MinSessionNameLength && valid.IsHexcolor(trimedColor) {
+		character := Character{UUID: uuid.New(), CharacterName: trimedCharactername, Color: trimedColor}
+		p.Characters = append(p.Characters, character)
+		sqliteStorage.db.Save(character)
+		sqliteStorage.db.Save(p)
+		log.Infof("Player %s registered Character: %s", p.Name, character.CharacterName)
 		return &character, nil
 	}
-	return nil, errors.New("Invalid Character Name")
+	return nil, ErrInvalidCharacterName
 }

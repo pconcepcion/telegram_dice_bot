@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/jinzhu/gorm"
+	"strings"
 	// sqlite dialect for the gorm package
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/sirupsen/logrus"
@@ -16,35 +17,38 @@ func init() {
 
 }
 
-// Roll database model to sotre a single dice expression roll
-type Roll struct {
-	gorm.Model
-	DiceExpression string
-	Sesssion       Session
-	Results        string
-	FinalResult    uint32
+// SQLiteStorage handles the storage on a SQLite database
+type SQLiteStorage struct {
+	db               *gorm.DB
+	dbPath           string
+	accessConnection string
 }
 
-var (
-	db *gorm.DB
-)
-
-func main() {
-	db, err := gorm.Open("sqlite3", "telagram_dice_bot.db")
+// Connect opens and configures the sqlite DB using the recived configuration string
+func Connect(accessConnection string) *SQLiteStorage {
+	var err error
+	var s *SQLiteStorage
+	// TODO handle the schema and validate it
+	s = &SQLiteStorage{accessConnection: accessConnection}
+	log.Debug("AccessConnection: ", accessConnection)
+	s.dbPath = strings.TrimPrefix(accessConnection, "sqlite://")
+	log.Debug("DB Path: ", s.dbPath)
+	// TODO validate the path
+	s.db, err = gorm.Open("sqlite3", s.dbPath)
 	if err != nil {
 		panic("failed to connect database")
 	}
-	defer db.Close()
+	log.Infof("Connected to the DB: %v on %s", s.db, s.dbPath)
 
 	// Migrate the schema
-	db.AutoMigrate(&Roll{})
-	db.AutoMigrate(&Session{})
-	db.AutoMigrate(&Player{})
-	db.AutoMigrate(&Character{})
+	s.db.AutoMigrate(&Roll{})
+	s.db.AutoMigrate(&Session{})
+	s.db.AutoMigrate(&Player{})
+	s.db.AutoMigrate(&Character{})
 
 	// Create Indexes
-	db.Model(&Player{}).AddIndex("idx_player_name", "name")
-	db.Model(&Character{}).AddIndex("idx_character_name", "name")
+	s.db.Model(&Player{}).AddIndex("idx_player_name", "name")
+	s.db.Model(&Character{}).AddIndex("idx_character_name", "name")
 
 	// Create
 	//db.Create(&Product{Code: "L1212", Price: 1000})
@@ -59,4 +63,10 @@ func main() {
 
 	// Delete - delete product
 	//db.Delete(&product)
+	return s
+}
+
+// Close closes the SQLite database
+func (s *SQLiteStorage) Close() {
+	s.db.Close()
 }
