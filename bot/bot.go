@@ -26,63 +26,55 @@ func init() {
 
 }
 
-var apiToken string
+// SessionsMap maps the Chat ID to the Session name
+type SessionsMap map[int64]*storage.Session
 
-func getAPIToken() {
-	apiToken = viper.GetString("api_token")
+// bot holds the configuration and the reference to the API for the bot
+type bot struct {
+	apiToken       string
+	api            *tgbotapi.BotAPI
+	timeout        int // Bot timeout in seconds
+	updateConfig   tgbotapi.UpdateConfig
+	storage        *storage.SQLiteStorage
+	ActiveSessions SessionsMap
+}
+
+// getAPIToken gets the API token from the configuration and does some basic validation
+func (b *bot) getAPIToken() {
+	b.apiToken = viper.GetString("api_token")
+	if b.apiToken == "" || len(b.apiToken) < apiTokenMinLength {
+		log.Error("API Token not found")
+		os.Exit(-1)
+	}
+	log.Info("Bot", b)
+}
+
+// authorize does the authorization of the bot and set the bot mode
+func (b *bot) authorize(debug bool) {
+	var err error
+	b.getAPIToken()
+	log.Printf("Authorizing bot with token starting with '%s'", b.apiToken[0:3])
+	b.api, err = tgbotapi.NewBotAPI(b.apiToken)
+	if err != nil {
+		errorMsg := fmt.Sprintf("Couldn't access the API with token starting with '%s'", b.apiToken[0:3])
+		log.Panic(errors.Wrap(err, errorMsg))
+	}
+
+	b.api.Debug = debug
+
+	log.Printf("Authorized on account %s", b.api.Self.UserName)
+	log.Printf("debug = %t", debug)
 }
 
 // roll the dice expession contained on the message
 func roll(message string) (rpg.ExpressionResult, error) {
 	toRoll := rpg.NewSimpleExpression(message)
 	return toRoll.Roll()
-}
-
-// Do the authorization of the bot and set the bot mode
-func authorizeBot(debug bool) *tgbotapi.BotAPI {
-	getAPIToken()
-	if apiToken == "" || len(apiToken) < apiTokenMinLength {
-		log.Error("API Token not found")
-		os.Exit(-1)
-	}
-	log.Printf("Authorizing bot with token starting with '%s'", apiToken[0:3])
-	bot, err := tgbotapi.NewBotAPI(apiToken)
-	if err != nil {
-    errorMsg := fmt.Sprintf("Couldn't access the API with token starting with '%s'", apiToken[0:3])
-		log.Panic(errors.Wrap(err, errorMsg))
-	}
-
-	bot.Debug = debug
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-	log.Printf("debug = %t", debug)
-
-	return bot
-
-}
-
-// separates the dice expression and the following roll message on the first space
-func separateExressionAndRollMessage(arguments string) (expression, rollMessage string, err error) {
-  // TODO: Add some validation
-  splitted := strings.SplitAfterN(arguments, " ", 2)
-  expression = splitted[0]
-  // If there was a message get it
-  if len(splitted) > 1 {
-    rollMessage = splitted[1]
   }
-  return expression, rollMessage, nil
-}
 
-func composeResponse(user *tgbotapi.User, diceExpression, rollMessage string, result rpg.ExpressionResult) string {
-
-  message := fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* \u27A1 _%s_",
-    user.UserName, user.ID, diceExpression, result.GetResults(), result, rollMessage)
-
-  return message
-
-}
-
-func handleMessage(m *tgbotapi.Message) string {
+// handleMessage handles a telegram bot API message and returns a response on a string with Markdown_v2 format
+// see https://core.telegram.org/bots/api#markdownv2-style
+func (b *bot) handleMessage(m *tgbotapi.Message) string {
 	// TODO: Handle extra argument for the roll identifier: example "/d100 hide"
 	var response = "Unknown command"
   log.Debugf("Bot received command: %v", m)
@@ -90,7 +82,7 @@ func handleMessage(m *tgbotapi.Message) string {
 	switch m.Command() {
 	// Dice expression
 	case "de":
-    diceExpression, rollMessage , err := separateExressionAndRollMessage(m.CommandArguments())
+		diceExpression, rollMessage, err := separateExressionAndRollMessage(m.CommandArguments())
     if err != nil {
 			// TODO: handle the error gracefully
 			return "Dice expression Error"
@@ -120,49 +112,64 @@ func handleMessage(m *tgbotapi.Message) string {
 	case "d100":
 		response = fmt.Sprintf("d100 \u27A1 %d", rpg.D100())
 	// Session Handling
-	case "startSession":
+	case "start_session":
+		sessionName := m.CommandArguments()
 		// Store Session info
-    response = fmt.Sprintf("Creating Session: \n \U0001F3F7  *_%s_*", m.CommandArguments())
-		log.Info(response)
-    return response
-    // TODO fix the session storage
-		sessionName, err := storage.StartSession(m.CommandArguments())
+		session, err := b.storage.StartSession(sessionName, m.Chat.ID)
 		if err != nil {
 			response = fmt.Sprintf("Failed to create Session, invalid session name")
 			log.Errorf("Failed to create Session, invalid session arguments: %s", m.CommandArguments())
 			return response
 		}
+		b.ActiveSessions[m.Chat.ID] = session
+		log.Info("Starting Session %v", session)
     response = fmt.Sprintf("Starting Session: \n \U0001F3F7  *_%s_*", sessionName)
 		// TODO: Set session timeout
-	case "endSession":
+	case "end_session":
 		// TODO: Close session and add info on which session is closed
-		response = "\U0001F51A Session End"
+    activeSession := b.ActiveSessions[m.Chat.ID]
+    log.Info("Closing Session: ", activeSession)
+		b.storage.EndSession(activeSession)
+		response = fmt.Sprintf("\U0001F51A Session %s Finished", activeSession.Name)
 		log.Info(response)
     return response
-
 	}
 	return response
 }
 
-// Run launches the bot, does the authorization process and starts to listen for messages
-func Run() {
-	// Athorize the bot with debug mode
-	bot := authorizeBot(true)
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 30
+func botSetup(debug bool) *bot {
+	// Authorize the bot with debug mode
+	bot := bot{timeout: 30}
+	bot.ActiveSessions = make(map[int64]*storage.Session, 10)
+	bot.authorize(debug)
+	bot.updateConfig = tgbotapi.NewUpdate(0)
+	bot.updateConfig.Timeout = bot.timeout
 
-	self, err := bot.GetMe()
+	self, err := bot.api.GetMe()
 	if err != nil {
 		log.Error(err)
 	} else {
 		log.Infof("Bot info: %v", self)
 	}
 
-	updates, err := bot.GetUpdatesChan(u)
+	return &bot
+}
+
+// setupStorage setups the storage confiuration and keeps a referenc on the bot
+func (b *bot) setupStorage(storageAccessString string) {
+	b.storage = storage.Connect(storageAccessString)
+}
+
+// Run launches the bot, does the authorization process and starts to listen for messages
+func Run(storageAccessString string) {
+	// setup the bot with debug mode
+	bot := botSetup(true)
+	updates, err := bot.api.GetUpdatesChan(bot.updateConfig)
 	if err != nil {
 		log.Panic(err)
 	}
-
+	bot.setupStorage(storageAccessString)
+	defer bot.storage.Close()
 	for update := range updates {
 		if update.Message == nil {
 			continue
@@ -171,13 +178,36 @@ func Run() {
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 		log.Debugf("---\n%+v\n---", update.Message)
 		log.Debugf("---\n%+v\n---", update.Message.Chat)
-		response := handleMessage(update.Message)
+		response := bot.handleMessage(update.Message)
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, response)
     msg.ParseMode = "MarkdownV2"
 		msg.ReplyToMessageID = update.Message.MessageID
 
-		if _, sendErr := bot.Send(msg); sendErr != nil {
+		if _, sendErr := bot.api.Send(msg); sendErr != nil {
 			log.Error(sendErr)
 		}
 	}
+}
+
+// Helper functions
+
+// separates the dice expression and the following roll message on the first space
+func separateExressionAndRollMessage(arguments string) (expression, rollMessage string, err error) {
+	// TODO: Add some validation
+	splitted := strings.SplitAfterN(arguments, " ", 2)
+	expression = splitted[0]
+	// If there was a message get it
+	if len(splitted) > 1 {
+		rollMessage = splitted[1]
+	}
+	return expression, rollMessage, nil
+}
+
+func composeResponse(user *tgbotapi.User, diceExpression, rollMessage string, result rpg.ExpressionResult) string {
+
+	message := fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* \u27A1 _%s_",
+		user.UserName, user.ID, diceExpression, result.GetResults(), result, rollMessage)
+
+	return message
+
 }

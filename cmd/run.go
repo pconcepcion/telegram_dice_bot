@@ -42,12 +42,14 @@ var runCmd = &cobra.Command{
 	Short: "Start the bot",
 	Long:  `This command will start the bot.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		bot.Run()
+		bot.Run(Storage)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(runCmd)
+
+	// api_token flag
 	runCmd.Flags().String("api_token", "", "Telegram API Token")
 	viper.BindPFlag("api_token", runCmd.Flags().Lookup("api_token"))
 }
