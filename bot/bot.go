@@ -133,6 +133,8 @@ func (b *bot) handleMessage(m *tgbotapi.Message) string {
 		response = fmt.Sprintf("\U0001F51A Session %s Finished", activeSession.Name)
 		log.Info(response)
     return response
+	default:
+		return "Unknown Command"
 	}
 	return response
 }
@@ -184,10 +186,10 @@ func Run() {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, response)
     msg.ParseMode = "MarkdownV2"
 		msg.ReplyToMessageID = update.Message.MessageID
-
 		if _, sendErr := bot.api.Send(msg); sendErr != nil {
 			log.Error(sendErr)
 		}
+		log.Info("Response:", msg)
 	}
 }
 
@@ -206,10 +208,15 @@ func separateExressionAndRollMessage(arguments string) (expression, rollMessage 
 }
 
 func composeResponse(user *tgbotapi.User, diceExpression, rollMessage string, result rpg.ExpressionResult) string {
-
-	message := fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* \u27A1 _%s_",
+	var message string
+	if rollMessage != "" {
+		message = fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* \u27A1 _%s_",
 		user.UserName, user.ID, diceExpression, result.GetResults(), result, rollMessage)
-
+	} else {
+		message = fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* \u27A1 _%s_ ",
+			user.UserName, user.ID, diceExpression, result.GetResults(), result, "unspecified roll")
+	}
+	log.Info("MESSAGE", message)
 	return message
 
 }
