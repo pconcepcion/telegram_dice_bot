@@ -73,6 +73,9 @@ or with the `TDB_API_TOKEN` environment variable
 ## Testing
 Improve tests
 
+## References
+[Statically compiling Go programs](https://www.arp242.net/static-go.html)
+
 ## License
 
 This code is released under the [BSD-3 Clause License](http://opensource.org/licenses/BSD-3-Clause)

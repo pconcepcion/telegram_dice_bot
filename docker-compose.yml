@@ -1,0 +1,16 @@
+---
+version: "3.8"
+services:
+  telegram_dice_bot:
+    image: telegram_dice_bot:0.1
+    container_name: telegram_dice_bot
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+        - sqlite-volume:/tdb/storage
+    env_file:
+        - ./.env
+volumes:
+    sqlite-volume:
+        name: tdb-sqlite-volume

@@ -1,2 +1,5 @@
 telegram_dice_bot
+telegram_dice_bot_static
 .telegram_dice_bot.yaml
+.env
+telegram_dice_bot.sqlite
