@@ -42,7 +42,7 @@ var runCmd = &cobra.Command{
 	Short: "Start the bot",
 	Long:  `This command will start the bot.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		bot.Run(Storage)
+		bot.Run()
 	},
 }
 

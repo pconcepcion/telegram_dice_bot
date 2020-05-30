@@ -157,11 +157,13 @@ func botSetup(debug bool) *bot {
 
 // setupStorage setups the storage confiuration and keeps a referenc on the bot
 func (b *bot) setupStorage(storageAccessString string) {
+	log.Debugln("About to connect to Storage: ", storageAccessString)
 	b.storage = storage.Connect(storageAccessString)
 }
 
 // Run launches the bot, does the authorization process and starts to listen for messages
-func Run(storageAccessString string) {
+func Run() {
+	storageAccessString := viper.GetString("storage")
 	// setup the bot with debug mode
 	bot := botSetup(true)
 	updates, err := bot.api.GetUpdatesChan(bot.updateConfig)

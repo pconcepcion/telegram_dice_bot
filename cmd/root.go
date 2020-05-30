@@ -38,13 +38,31 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
 
-// Verbose defines if the output log should be verbose
-var Verbose bool
+	// Verbose defines if the output log should be verbose
+	Verbose bool
 
-// Storage holds the backend storage access string
-var Storage string
+	// Storage holds the backend storage access string
+	Storage string
+
+	// Program version
+	version = "0.1.0"
+
+	// BuildDate to show in the version command, should be set at build time (see Makefile)
+	BuildDate = "unknown"
+
+	// CommitHash to show in the version command, should be set at build time (see Makefile)
+	CommitHash = "unknown"
+)
+
+// Flag names
+const (
+	FlagConfig  = "config"
+	FlagVerbose = "verbose"
+	FlagStorage = "storage"
+)
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -55,6 +73,7 @@ var RootCmd = &cobra.Command{
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
+	Version: fmt.Sprintf("version: %s\ncommmit hash: %s\nBuild date: %s\n", version, CommitHash, BuildDate),
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -73,13 +92,14 @@ func init() {
 	// Cobra supports Persistent Flags, which, if defined here,
 	// will be global for your application.
 
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.telegram_dice_bot.yaml)")
-	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
-	viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose"))
+	RootCmd.PersistentFlags().StringVar(&cfgFile, FlagConfig, "", "config file (default is $HOME/.telegram_dice_bot.yaml)")
+	RootCmd.PersistentFlags().BoolVarP(&Verbose, FlagVerbose, "v", false, "verbose output")
+	viper.BindPFlag(FlagStorage, RootCmd.PersistentFlags().Lookup(FlagVerbose))
 
 	// storage
-	RootCmd.PersistentFlags().StringVarP(&Storage, "storage", "s", "sqlite://telegram_bot_api.sqlite", "Storage backend")
-	viper.BindPFlag("storage", RootCmd.PersistentFlags().Lookup("storage"))
+	RootCmd.PersistentFlags().StringVarP(&Storage, FlagStorage, "s", "", "Storage backend")
+	viper.BindPFlag(FlagStorage, RootCmd.PersistentFlags().Lookup(FlagStorage))
+	viper.SetDefault(FlagStorage, "sqlite://telegram_dice_bot.sqlite")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -103,7 +123,7 @@ func initConfig() {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	} else {
 		if Verbose {
-			fmt.Printf("No config file found:\n%s\n", err)
+			fmt.Println(err)
 		} else {
 			fmt.Println("No config file found")
 		}
