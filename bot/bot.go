@@ -17,7 +17,9 @@ import (
 var log = logrus.New()
 
 const (
-  apiTokenMinLength = 5
+	apiTokenMinLength     = 5
+	responseArrowTemplate = "\u27A1 %d"
+	rigthArrow            = "\u27A1"
 )
 
 func init() {
@@ -46,14 +48,14 @@ func (b *bot) getAPIToken() {
 		log.Error("API Token not found")
 		os.Exit(-1)
 	}
-	log.Info("Bot", b)
+	log.Debugf("Found API Token: %sXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n", b.apiToken[0:3])
 }
 
 // authorize does the authorization of the bot and set the bot mode
 func (b *bot) authorize(debug bool) {
 	var err error
 	b.getAPIToken()
-	log.Printf("Authorizing bot with token starting with '%s'", b.apiToken[0:3])
+	log.Printf("Authorizing bot with token '%sXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'", b.apiToken[0:3])
 	b.api, err = tgbotapi.NewBotAPI(b.apiToken)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Couldn't access the API with token starting with '%s'", b.apiToken[0:3])
@@ -96,47 +98,87 @@ func (b *bot) handleMessage(m *tgbotapi.Message) string {
 		response = composeResponse(m.From, diceExpression, rollMessage, dicesResult)
 	// Basic dices
 	case "d2":
-		response = fmt.Sprintf("d2 \u27A1 %d", rpg.D2())
+		response = fmt.Sprintf("d2 "+responseArrowTemplate, rpg.D2())
 	case "d4":
-		response = fmt.Sprintf("d4 \u27A1 %d", rpg.D4())
+		response = fmt.Sprintf("d4 "+responseArrowTemplate, rpg.D4())
 	case "d6":
-		response = fmt.Sprintf("d6 \u27A1 %d", rpg.D6())
+		response = fmt.Sprintf("d6 "+responseArrowTemplate, rpg.D6())
 	case "d8":
-		response = fmt.Sprintf("d8 \u27A1 %d", rpg.D8())
+		response = fmt.Sprintf("d8 "+responseArrowTemplate, rpg.D8())
 	case "d10":
-		response = fmt.Sprintf("d10 \u27A1 %d", rpg.D10())
+		response = fmt.Sprintf("d10 "+responseArrowTemplate, rpg.D10())
 	case "d12":
-		response = fmt.Sprintf("d12 \u27A1 %d", rpg.D12())
+		response = fmt.Sprintf("d12 "+responseArrowTemplate, rpg.D12())
 	case "d20":
-		response = fmt.Sprintf("d20 \u27A1 %d", rpg.D20())
+		response = fmt.Sprintf("d20 "+responseArrowTemplate, rpg.D20())
 	case "d100":
-		response = fmt.Sprintf("d100 \u27A1 %d", rpg.D100())
+		response = fmt.Sprintf("d100 "+responseArrowTemplate, rpg.D100())
 	// Session Handling
 	case "start_session":
-		sessionName := m.CommandArguments()
 		// Store Session info
-		session, err := b.storage.StartSession(sessionName, m.Chat.ID)
-		if err != nil {
-			response = fmt.Sprintf("Failed to create Session, invalid session name")
-			log.Errorf("Failed to create Session, invalid session arguments: %s", m.CommandArguments())
-			return response
-		}
-		b.ActiveSessions[m.Chat.ID] = session
-		log.Info("Starting Session %v", session)
-    response = fmt.Sprintf("Starting Session: \n \U0001F3F7  *_%s_*", sessionName)
+		sessionName := m.CommandArguments()
+		response = b.handleStartSession(m.Chat.ID, sessionName)
 		// TODO: Set session timeout
+	case "rename_session":
+		// Updte Session info
+		sessionName := m.CommandArguments()
+		response = b.handleRenameSession(m.Chat.ID, sessionName)
 	case "end_session":
-		// TODO: Close session and add info on which session is closed
-    activeSession := b.ActiveSessions[m.Chat.ID]
-    log.Info("Closing Session: ", activeSession)
-		b.storage.EndSession(activeSession)
-		response = fmt.Sprintf("\U0001F51A Session %s Finished", activeSession.Name)
-		log.Info(response)
-    return response
+		// TODO: Generate session Summary
+		response = b.handleEndSession(m.Chat.ID)
+		return response
 	default:
 		return "Unknown Command"
 	}
+	log.Debug("response", response)
 	return response
+}
+
+func (b *bot) handleStartSession(chatID int64, sessionName string) string {
+	var response string
+	session, err := b.storage.StartSession(sessionName, chatID)
+		if err != nil {
+			response = fmt.Sprintf("Failed to create Session, invalid session name")
+		log.Errorf("Failed to create Session, invalid session arguments: %s", sessionName)
+		return response
+	}
+	b.ActiveSessions[chatID] = session
+	log.Infof("Starting Session %v\n", session)
+	response = fmt.Sprintf("Starting Session: \n \U0001F3F7  *_\\#%s_*", sessionName)
+	return response
+}
+
+func (b *bot) handleRenameSession(chatID int64, name string) string {
+	activeSession := b.ActiveSessions[chatID]
+	if activeSession == nil {
+		response := fmt.Sprintf("Failed to rename Session, no active session found")
+		log.Errorf("Failed to rename Session session not found: %d", chatID)
+		return response
+	}
+
+	oldName := activeSession.Name
+	err := b.storage.RenameSession(activeSession, name)
+	if err != nil {
+		response := fmt.Sprintf("Failed to rename Session _\\#%s_, invalid session name", oldName)
+		log.Errorf("Failed to rename Session _\\#%s_, invalid session arguments: %s", oldName, name)
+		return response
+	}
+	return fmt.Sprintf("Session renamed: \n _\\#%s_ \U0001F3F7  *_\\#%s_*", oldName, name)
+}
+
+func (b *bot) handleEndSession(chatID int64) string {
+	activeSession := b.ActiveSessions[chatID]
+	if activeSession == nil {
+		response := fmt.Sprintf("Failed to rename Session, no active session found")
+		log.Errorf("Failed to rename Session session not found: %d", chatID)
+			return response
+		}
+    log.Info("Closing Session: ", activeSession)
+		b.storage.EndSession(activeSession)
+	b.ActiveSessions[chatID] = nil
+	response := fmt.Sprintf("\U0001F51A Session _\\#%s_ Finished", activeSession.Name)
+		log.Info(response)
+    return response
 }
 
 func botSetup(debug bool) *bot {
@@ -151,7 +193,7 @@ func botSetup(debug bool) *bot {
 	if err != nil {
 		log.Error(err)
 	} else {
-		log.Infof("Bot info: %v", self)
+		log.Infof("Bot info: %#v", self)
 	}
 
 	return &bot
@@ -210,10 +252,10 @@ func separateExressionAndRollMessage(arguments string) (expression, rollMessage 
 func composeResponse(user *tgbotapi.User, diceExpression, rollMessage string, result rpg.ExpressionResult) string {
 	var message string
 	if rollMessage != "" {
-		message = fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* \u27A1 _%s_",
+		message = fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* "+rigthArrow+" _%s_",
 		user.UserName, user.ID, diceExpression, result.GetResults(), result, rollMessage)
 	} else {
-		message = fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* \u27A1 _%s_ ",
+		message = fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* "+rigthArrow+" _%s_ ",
 			user.UserName, user.ID, diceExpression, result.GetResults(), result, "unspecified roll")
 	}
 	log.Info("MESSAGE", message)

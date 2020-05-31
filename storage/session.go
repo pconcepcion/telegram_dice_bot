@@ -1,13 +1,13 @@
 package storage
 
 import (
-	"errors"
 	"time"
 
-	valid "github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"github.com/pconcepcion/dice"
+	"github.com/pconcepcion/telegram_dice_bot/validations"
+	"github.com/pkg/errors"
 )
 
 // Session  database model that stores information on the game session,
@@ -18,7 +18,8 @@ type Session struct {
 	Name           string `valid:"alphanum,required,runelength(2|32)"`
 	SartTime       time.Time
 	EndTime        time.Time
-	Rolls          []Roll `gorm:"foreignkey:SessionUUID"`
+	Rolls          []Roll   `gorm:"foreignkey:SessionUUID"`
+	Players        []Player `gorm:"foreignkey:PlayerUUID"`
 	ChatTelegramID int64
 }
 
@@ -33,23 +34,27 @@ type Roll struct {
 	Description      string
 }
 
-const (
-	// MinSessionNameLength minimum length for the Session name
-	MinSessionNameLength = 2
-	// MaxSessionNameLength maximum length for the Session name
-	MaxSessionNameLength = 32
-)
-
 // StartSession creates a new Session object with a current sarting time and the given name
 func (sqliteStorage *SQLiteStorage) StartSession(name string, chatID int64) (*Session, error) {
-	trimedname := valid.Trim(name, "") // Remove starting an tailing whitespace
-	if valid.IsAlphanumeric(trimedname) && len(trimedname) <= MaxSessionNameLength && len(trimedname) >= MinSessionNameLength {
-		session := &Session{UUID: uuid.New(), Name: trimedname, SartTime: time.Now(), ChatTelegramID: chatID}
-		log.Infof("Start Session: %v", session)
-		sqliteStorage.db.Create(session)
-		return session, nil
+	validName, err := validations.ValidateSessionName(name) //
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid Session Name")
 	}
-	return nil, errors.New("Invalid Session Name")
+	session := &Session{UUID: uuid.New(), Name: validName, SartTime: time.Now(), ChatTelegramID: chatID}
+	log.Infof("Start Session: %v", session)
+	sqliteStorage.db.Create(session)
+	return session, nil
+}
+
+// RenameSession changes the name of the session and stores it on the SQLite DB
+func (sqliteStorage *SQLiteStorage) RenameSession(ses *Session, name string) error {
+	validName, err := validations.ValidateSessionName(name) //
+	if err != nil {
+		return errors.Wrap(err, "Invalid Session Name")
+	}
+	ses.Name = validName
+	sqliteStorage.db.Save(ses)
+	return nil
 }
 
 // EndSession stores the end time for the session and unset it as the active session
