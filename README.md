@@ -69,6 +69,11 @@ or with the `TDB_API_TOKEN` environment variable
 
     export TDB_API_TOKEN="<YOUR API TOKEN HERE>"
 
+## Docker
+
+The bot can run on docker, a [`Docerfile`](Dockerfile) and [`docker-compose.yaml`](docker-compose.yaml) file are provided the targets to buile the docker images incudoded on the  [`Makefile`](Makefile)
+
+So to build the dockerimage you just need to run `make docker` or `make docker-compose` and then you can start the image with `docker-compose up` (this will create persistend [docker volume](https://docs.docker.com/storage/volumes/) named `tbd-sqlite-volume`)
 
 ## Testing
 Improve tests
