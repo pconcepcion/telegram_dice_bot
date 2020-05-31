@@ -3,7 +3,7 @@ package bot
 import (
 	"fmt"
 	"os"
-  "strings"
+	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	rpg "github.com/pconcepcion/dice"
@@ -20,7 +20,8 @@ const (
 	apiTokenMinLength     = 5
 	responseArrowTemplate = "\u27A1 %d"
 	rigthArrow            = "\u27A1"
-)
+	label                 = "\U0001F3F7"
+}
 
 func init() {
 	log.Formatter = &logrus.TextFormatter{DisableLevelTruncation: true, FullTimestamp: true, PadLevelText: true}
@@ -72,28 +73,28 @@ func (b *bot) authorize(debug bool) {
 func roll(message string) (rpg.ExpressionResult, error) {
 	toRoll := rpg.NewSimpleExpression(message)
 	return toRoll.Roll()
-  }
+}
 
 // handleMessage handles a telegram bot API message and returns a response on a string with Markdown_v2 format
 // see https://core.telegram.org/bots/api#markdownv2-style
 func (b *bot) handleMessage(m *tgbotapi.Message) string {
 	// TODO: Handle extra argument for the roll identifier: example "/d100 hide"
 	var response = "Unknown command"
-  log.Debugf("Bot received command: %v", m)
+	log.Debugf("Bot received command: %v", m)
 	log.Infof("Bot command: %v, arguments %v", m.Command(), m.CommandArguments())
 	switch m.Command() {
 	// Dice expression
 	case "de":
 		diceExpression, rollMessage, err := separateExressionAndRollMessage(m.CommandArguments())
-    if err != nil {
+		if err != nil {
 			// TODO: handle the error gracefully
 			return "Dice expression Error"
-    }
+		}
 		dicesResult, err := roll(diceExpression)
 		if err != nil {
 			// TODO: handle the error gracefully
 			log.Error(err)
-			 return "Dice expression Error"
+			return "Dice expression Error"
 		}
 		response = composeResponse(m.From, diceExpression, rollMessage, dicesResult)
 	// Basic dices
@@ -113,7 +114,7 @@ func (b *bot) handleMessage(m *tgbotapi.Message) string {
 		response = fmt.Sprintf("d20 "+responseArrowTemplate, rpg.D20())
 	case "d100":
 		response = fmt.Sprintf("d100 "+responseArrowTemplate, rpg.D100())
-	// Session Handling
+		// Session Handling
 	case "start_session":
 		// Store Session info
 		sessionName := m.CommandArguments()
@@ -137,8 +138,8 @@ func (b *bot) handleMessage(m *tgbotapi.Message) string {
 func (b *bot) handleStartSession(chatID int64, sessionName string) string {
 	var response string
 	session, err := b.storage.StartSession(sessionName, chatID)
-		if err != nil {
-			response = fmt.Sprintf("Failed to create Session, invalid session name")
+	if err != nil {
+		response = fmt.Sprintf("Failed to create Session, invalid session name")
 		log.Errorf("Failed to create Session, invalid session arguments: %s", sessionName)
 		return response
 	}
@@ -163,7 +164,7 @@ func (b *bot) handleRenameSession(chatID int64, name string) string {
 		log.Errorf("Failed to rename Session _\\#%s_, invalid session arguments: %s", oldName, name)
 		return response
 	}
-	return fmt.Sprintf("Session renamed: \n _\\#%s_ \U0001F3F7  *_\\#%s_*", oldName, name)
+	return fmt.Sprintf(label+" Session renamed: \n _\\#%s_ "+rigthArrow+" *_\\#%s_*", oldName, name)
 }
 
 func (b *bot) handleEndSession(chatID int64) string {
@@ -171,14 +172,14 @@ func (b *bot) handleEndSession(chatID int64) string {
 	if activeSession == nil {
 		response := fmt.Sprintf("Failed to rename Session, no active session found")
 		log.Errorf("Failed to rename Session session not found: %d", chatID)
-			return response
-		}
-    log.Info("Closing Session: ", activeSession)
-		b.storage.EndSession(activeSession)
+		return response
+	}
+	log.Info("Closing Session: ", activeSession)
+	b.storage.EndSession(activeSession)
 	b.ActiveSessions[chatID] = nil
-	response := fmt.Sprintf("\U0001F51A Session _\\#%s_ Finished", activeSession.Name)
-		log.Info(response)
-    return response
+	response := fmt.Sprintf(label+" Session _\\#%s_ Finished", activeSession.Name)
+	log.Info(response)
+	return response
 }
 
 func botSetup(debug bool) *bot {
@@ -226,7 +227,7 @@ func Run() {
 		log.Debugf("---\n%+v\n---", update.Message.Chat)
 		response := bot.handleMessage(update.Message)
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, response)
-    msg.ParseMode = "MarkdownV2"
+		msg.ParseMode = "MarkdownV2"
 		msg.ReplyToMessageID = update.Message.MessageID
 		if _, sendErr := bot.api.Send(msg); sendErr != nil {
 			log.Error(sendErr)
@@ -253,7 +254,7 @@ func composeResponse(user *tgbotapi.User, diceExpression, rollMessage string, re
 	var message string
 	if rollMessage != "" {
 		message = fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* "+rigthArrow+" _%s_",
-		user.UserName, user.ID, diceExpression, result.GetResults(), result, rollMessage)
+			user.UserName, user.ID, diceExpression, result.GetResults(), result, rollMessage)
 	} else {
 		message = fmt.Sprintf("*[@%s](tg://user?id=%d)* rolled *%s* and got _%v_ \n *_%s_* "+rigthArrow+" _%s_ ",
 			user.UserName, user.ID, diceExpression, result.GetResults(), result, "unspecified roll")
