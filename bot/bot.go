@@ -21,7 +21,7 @@ const (
 	responseArrowTemplate = "\u27A1 %d"
 	rigthArrow            = "\u27A1"
 	label                 = "\U0001F3F7"
-}
+)
 
 func init() {
 	log.Formatter = &logrus.TextFormatter{DisableLevelTruncation: true, FullTimestamp: true, PadLevelText: true}
