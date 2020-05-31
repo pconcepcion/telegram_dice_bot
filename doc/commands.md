@@ -6,6 +6,8 @@ The expressions follow mostly the [Dice Notation](https://en.wikipedia.org/wiki/
 
 ## Single Die commands
 
+Simple, roll a single die and get the result, just predefined the most common dices for simpler access
+
 * `d2`: Roll a die with 2 sides
 * `d4`: Roll a die with 4 sides
 * `d6`: Roll a die with 6 sides
@@ -29,27 +31,35 @@ The number of dices it's the number before the `d`, just after the `d` it's the 
 
 ### Keep (`k`)
 
-* `/de 4d6k3`: Roll 4d6 and keep the top (k) 3 results
+Roll some dices, keep the top _X_ (_X_ must not be more than the number of dices rolled) and then sum the result of the dices kept
+
+* `/de 4d6k3`: Roll 4d6 and keep the top 3 results
 
 ### Keep Lower (`kl`)
 
-* `/de 4d6kl3`: Roll 4d6 and keep the lower (kl) 3 results
+Roll some dices, keep the lower _X_ (_X_ must not be more than the number of dices rolled) and then sum the result of the dices kept
+
+* `/de 4d6kl3`: Roll 4d6 and keep the lower  3 results
 
 ### Explode (`e`)
 
-* `/de 5d10e`: Roll 5d10 and explode (e) roll again and add each 10
+On exploding rolls the system rolls again the dices that get the maximum value of the dice, and then add all the results, including the re rolled dices. 
+
+* `/de 5d10e`: Roll 5d10 and explode roll again and add each 10
 
 ### Success (`s`)
 
-* `/de 4d10s8`: Roll 4d10 and count as a success (s) each >= 8 
+The _success_ rolls the system counts the dices with a result over the give threshold 
+
+* `/de 4d10s8`: Roll 4d10 and count as a success each result of more 8 or more
 
 ### Exploding Success (`es`)
 
-* `/de 6d10es8`: Roll 4d10 and explode(e) each 10 and count the success (s) >= 8 
+* `/de 6d10es8`: Roll 4d10 and explode (roll again) each 10 and count the number of success (results of 8 or more including the 10 that are rerolled)
 
 ### Exploding Success (`r`)
 
-* `/de 4d6r2`: Roll 4d6 and re-roll (r) any result  < 2
+* `/de 4d6r2`: Roll 4d6 and re-roll any result lower 2 util you get 2 or more (there is a hard limit of 100 re-rolls) 
 
 ## Session Handling
 
