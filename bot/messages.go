@@ -4,32 +4,38 @@ import (
 	"fmt"
 	"strings"
 
+	valid "github.com/pconcepcion/telegram_dice_bot/validations"
+	"github.com/pkg/errors"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	rpg "github.com/pconcepcion/dice"
 )
 
+func handleDiceExpression(m *tgbotapi.Message) string {
+	diceExpression, rollMessage, err := separateExressionAndRollMessage(m.CommandArguments())
+	if err != nil {
+		// TODO: handle the error gracefully
+		return "Dice expression Error"
+	}
+	dicesResult, err := roll(diceExpression)
+	if err != nil {
+		// TODO: handle the error gracefully
+		log.Error(err)
+		return "Dice expression Error"
+	}
+	return composeResponse(m.From, diceExpression, rollMessage, dicesResult)
+}
+
 // handleMessage handles a telegram bot API message and returns a response on a string with Markdown_v2 format
 // see https://core.telegram.org/bots/api#markdownv2-style
 func (b *bot) handleMessage(m *tgbotapi.Message) string {
-	// TODO: Handle extra argument for the roll identifier: example "/d100 hide"
 	var response = "Unknown command"
 	log.Debugf("Bot received command: %v", m)
 	log.Infof("Bot command: %v, arguments %v", m.Command(), m.CommandArguments())
 	switch m.Command() {
 	// Dice expression
 	case "de":
-		diceExpression, rollMessage, err := separateExressionAndRollMessage(m.CommandArguments())
-		if err != nil {
-			// TODO: handle the error gracefully
-			return "Dice expression Error"
-		}
-		dicesResult, err := roll(diceExpression)
-		if err != nil {
-			// TODO: handle the error gracefully
-			log.Error(err)
-			return "Dice expression Error"
-		}
-		response = composeResponse(m.From, diceExpression, rollMessage, dicesResult)
+		response = handleDiceExpression(m)
 	// Basic dices
 	case "d2":
 		response = fmt.Sprintf("d2 "+responseArrowTemplate, rpg.D2())
@@ -75,11 +81,15 @@ func separateExressionAndRollMessage(arguments string) (expression, rollMessage 
 	// TODO: Add some validation
 	splitted := strings.SplitAfterN(arguments, " ", 2)
 	expression = splitted[0]
+	validExpression, err := valid.CheckInvalidDiceExpression(expression)
+	if err != nil {
+		return expression, rollMessage, errors.Wrap(err, "Obtained an invalid dice Expression")
+	}
 	// If there was a message get it
 	if len(splitted) > 1 {
 		rollMessage = splitted[1]
 	}
-	return expression, rollMessage, nil
+	return validExpression, rollMessage, nil
 }
 
 // composeResponse preapres the response string to be sent to Telegram
