@@ -1,7 +1,6 @@
 package storage
 
 import (
-	valid "github.com/asaskevich/govalidator"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"github.com/pconcepcion/telegram_dice_bot/validations"
@@ -41,23 +40,29 @@ func (sqliteStorage SQLiteStorage) Player(name string, username string, telegram
 	if err != nil {
 		return nil, errors.Wrap(err, "Couldn't store player, invalid username")
 	}
+	validColor, err := validations.ValidateColor(color)
+	if err != nil {
+		// TODO: this can be handled gracefully by setting a default color
+		return nil, errors.Wrap(err, "Couldn't store player, invalid color")
+	}
 	// TODO: finish validations
-	sqliteStorage.db.Where(Player{UserTelegramID: telegramUserID}).Attrs(Player{UUID: uuid.New(), Name: validName, UserName: validUserName}).FirstOrInit(&player)
-	log.Infof("Registered Player: %v", player)
+	sqliteStorage.db.Where(Player{UserTelegramID: telegramUserID}).Attrs(Player{UUID: uuid.New(), Name: validName, UserName: validUserName, Color: validColor}).FirstOrInit(&player)
+	log.Infof("Player: %v", player)
 	return &player, nil
 }
 
 // RegisterCharacter register a Character controled by a player
 func (sqliteStorage SQLiteStorage) RegisterCharacter(p *Player, charactername string, color string) (*Character, error) {
-	trimedColor := valid.Trim(color, "")
 	validCharacterName, err := validations.ValidateCharacterName(charactername)
 	if err != nil {
 		return nil, errors.Wrap(err, "Couldn't store character, invalid character name")
 	}
-	if !valid.IsHexcolor(trimedColor) {
+	validColor, err := validations.ValidateColor(color)
+	if err != nil {
+		// TODO: this can be handled gracefully by setting a default color
 		return nil, errors.Wrap(err, "Couldn't store character, invalid color")
 	}
-	character := Character{UUID: uuid.New(), CharacterName: validCharacterName, Color: trimedColor}
+	character := Character{UUID: uuid.New(), CharacterName: validCharacterName, Color: validColor}
 	///sqliteStorage.db.Where(Player{UserTelegramID: telegramUserID}).Attrs(Player{UUID: uuid.New(), Name: trimedname, UserName: trimedUsername}).FirstOrInit(&player)
 	p.Characters = append(p.Characters, character)
 	sqliteStorage.db.Save(character)
