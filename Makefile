@@ -14,6 +14,9 @@ goformat:
 	go fmt ./...
 
 test:
+	go test -v ./...
+
+test-race:
 	go test -v -race ./...
 
 lint:
@@ -34,4 +37,4 @@ dev-deps:
 docker: build-static
 	docker build -t telegram_dice_bot:0.1 .
 docker-compose: build-static
-	docker-compose build 
+	docker-compose build --parallel
