@@ -47,8 +47,8 @@ var (
 	// Storage holds the backend storage access string
 	Storage string
 
-	// Program version
-	version = "0.1.0"
+	// Version stores the Program version
+	Version = "unknown"
 
 	// BuildDate to show in the version command, should be set at build time (see Makefile)
 	BuildDate = "unknown"
@@ -73,7 +73,7 @@ var RootCmd = &cobra.Command{
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
-	Version: fmt.Sprintf("version: %s\ncommmit hash: %s\nBuild date: %s\n", version, CommitHash, BuildDate),
+	Version: fmt.Sprintf("%s\ncommmit hash: %s\nBuild date: %s\n", Version, CommitHash, BuildDate),
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.

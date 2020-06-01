@@ -1,11 +1,12 @@
-build_date = -X github.com/pconcepcion/telegram_dice_bot/cmd.BuildDate=`date -u '+%Y-%m-%d_%I:%M:%S%p'`
+build_date = -X github.com/pconcepcion/telegram_dice_bot/cmd.BuildDate=`date '+%Y-%m-%dT%H:%M:%S%:z'`
 commit_hash = -X github.com/pconcepcion/telegram_dice_bot/cmd.CommitHash=`git rev-parse HEAD`
+version = -X github.com/pconcepcion/telegram_dice_bot/cmd.Version=`head -1 VERSION`
 
 build:
-	go build -ldflags "$(build_date) $(commit_hash)" -tags sqlite_omit_load_extension  -o telegram_dice_bot
+	go build -ldflags "$(build_date) $(commit_hash) $(version)" -tags sqlite_omit_load_extension  -o telegram_dice_bot
 
 build-static:
-	go build -ldflags "-extldflags=-static $(build_date) $(commit_hash)" -tags sqlite_omit_load_extension  -o telegram_dice_bot_static
+	go build -ldflags "-extldflags=-static $(build_date) $(commit_hash) $(version)" -tags sqlite_omit_load_extension  -o telegram_dice_bot_static
 
 install:
 	go install
