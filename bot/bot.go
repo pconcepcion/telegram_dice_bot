@@ -27,8 +27,11 @@ func init() {
 
 }
 
-// SessionsMap maps the Chat ID to the Session name
+// SessionsMap maps the Chat ID to the Session
 type SessionsMap map[int64]*storage.Session
+
+// PlayersMap maps the chat User ID to the Player
+type PlayersMap map[int]*storage.Player
 
 // bot holds the configuration and the reference to the API for the bot
 type bot struct {
@@ -38,6 +41,7 @@ type bot struct {
 	updateConfig   tgbotapi.UpdateConfig
 	storage        *storage.SQLiteStorage
 	ActiveSessions SessionsMap
+	ActivePlayers  PlayersMap
 }
 
 // getAPIToken gets the API token from the configuration and does some basic validation
@@ -71,6 +75,7 @@ func botSetup(debug bool) *bot {
 	// Authorize the bot with debug mode
 	bot := bot{timeout: 30}
 	bot.ActiveSessions = make(map[int64]*storage.Session, 10)
+	bot.ActivePlayers = make(map[int]*storage.Player, 8)
 	bot.authorize(debug)
 	bot.updateConfig = tgbotapi.NewUpdate(0)
 	bot.updateConfig.Timeout = bot.timeout

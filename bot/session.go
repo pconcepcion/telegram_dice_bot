@@ -12,13 +12,13 @@ func (b *bot) handleStartSession(chatID int64, sessionName string) string {
 	}
 	b.ActiveSessions[chatID] = session
 	log.Infof("Starting Session %v\n", session)
-	response = fmt.Sprintf("Starting Session: \n \U0001F3F7  *_\\#%s_*", sessionName)
+	response = fmt.Sprintf("Starting \\#session: \n \U0001F3F7  *_\\#%s_*", sessionName)
 	return response
 }
 
 func (b *bot) handleRenameSession(chatID int64, name string) string {
-	activeSession := b.ActiveSessions[chatID]
-	if activeSession == nil {
+	activeSession, ok := b.ActiveSessions[chatID]
+	if ok == false {
 		response := fmt.Sprintf("Failed to rename Session, no active session found")
 		log.Errorf("Failed to rename Session session not found: %d", chatID)
 		return response
@@ -31,20 +31,20 @@ func (b *bot) handleRenameSession(chatID int64, name string) string {
 		log.Errorf("Failed to rename Session _\\#%s_, invalid session arguments: %s", oldName, name)
 		return response
 	}
-	return fmt.Sprintf(label+" Session renamed: \n _\\#%s_ "+rigthArrow+" *_\\#%s_*", oldName, name)
+	return fmt.Sprintf(label+" \\#session renamed: \n _\\#%s_ "+rigthArrow+" *_\\#%s_*", oldName, name)
 }
 
 func (b *bot) handleEndSession(chatID int64) string {
-	activeSession := b.ActiveSessions[chatID]
-	if activeSession == nil {
+	activeSession, ok := b.ActiveSessions[chatID]
+	if ok == false {
 		response := fmt.Sprintf("Failed to rename Session, no active session found")
 		log.Errorf("Failed to rename Session session not found: %d", chatID)
 		return response
 	}
 	log.Info("Closing Session: ", activeSession)
 	b.storage.EndSession(activeSession)
-	b.ActiveSessions[chatID] = nil
-	response := fmt.Sprintf(label+" Session _\\#%s_ Finished", activeSession.Name)
+	delete(b.ActiveSessions, chatID)
+	response := fmt.Sprintf(label+" \\#session _\\#%s_ Finished", activeSession.Name)
 	log.Info(response)
 	return response
 }

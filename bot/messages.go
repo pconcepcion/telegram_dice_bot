@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	storage "github.com/pconcepcion/telegram_dice_bot/storage"
 	valid "github.com/pconcepcion/telegram_dice_bot/validations"
 	"github.com/pkg/errors"
 
@@ -11,18 +12,30 @@ import (
 	rpg "github.com/pconcepcion/dice"
 )
 
-func handleDiceExpression(m *tgbotapi.Message) string {
+func (b *bot) handleDiceExpression(m *tgbotapi.Message, player *storage.Player) string {
 	diceExpression, rollMessage, err := separateExressionAndRollMessage(m.CommandArguments())
 	if err != nil {
 		// TODO: handle the error gracefully
 		return "Dice expression Error"
 	}
 	dicesResult, err := roll(diceExpression)
+	// TODO: handle the result outside here
 	if err != nil {
 		// TODO: handle the error gracefully
 		log.Error(err)
 		return "Dice expression Error"
 	}
+	activeSession := b.ActiveSessions[m.Chat.ID]
+	results := fmt.Sprintf("%v", dicesResult.GetResults())
+	// TODO: get the actual raw ressults
+	rawresults := fmt.Sprintf("%v", dicesResult.GetResults())
+	// TODO: Use an object for this call
+	// The roll should somehow be marked as sent or not, this should probably happen after the response is sent
+	err = b.storage.RegisterRoll(diceExpression, results, rawresults, rollMessage, dicesResult.GetTotal(), activeSession, player)
+	if err != nil {
+		log.Warn(" Error registering dice expression", err)
+	}
+
 	return composeResponse(m.From, diceExpression, rollMessage, dicesResult)
 }
 
@@ -32,10 +45,25 @@ func (b *bot) handleMessage(m *tgbotapi.Message) string {
 	var response = "Unknown command"
 	log.Debugf("Bot received command: %v", m)
 	log.Infof("Bot command: %v, arguments %v", m.Command(), m.CommandArguments())
+	activePlayer, err := b.getActivePlayer(m.From)
+	log.Debug("Active Player 0: ", activePlayer)
+	if err != nil {
+		log.Warn("Unable to get active player", err)
+		// TODO handle this gracefully
+		return "Invalid user"
+	}
+	log.Debug("Active Player: ", activePlayer)
+	activeSession, ok := b.ActiveSessions[m.Chat.ID]
+	if ok {
+		err := b.storage.AddPlayerToSessoionIfMissing(activePlayer, activeSession)
+		if err != nil {
+			log.Error("Error addig player to session")
+		}
+	}
 	switch m.Command() {
 	// Dice expression
 	case "de":
-		response = handleDiceExpression(m)
+		response = b.handleDiceExpression(m, activePlayer)
 	// Basic dices
 	case "d2":
 		response = fmt.Sprintf("d2 "+responseArrowTemplate, rpg.D2())
@@ -93,6 +121,7 @@ func separateExressionAndRollMessage(arguments string) (expression, rollMessage 
 }
 
 // composeResponse preapres the response string to be sent to Telegram
+// See: https://core.telegram.org/bots/api#markdownv2-style for MarkdownV2 style
 func composeResponse(user *tgbotapi.User, diceExpression, rollMessage string, result rpg.ExpressionResult) string {
 	var message string
 	if rollMessage != "" {
