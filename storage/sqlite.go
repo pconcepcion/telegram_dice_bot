@@ -1,8 +1,12 @@
 package storage
 
 import (
-	"github.com/jinzhu/gorm"
 	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
+
 	// sqlite dialect for the gorm package
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/sirupsen/logrus"
@@ -24,6 +28,20 @@ type SQLiteStorage struct {
 	accessConnection string
 }
 
+//BaseModel is a base to replace gorm base model to use UUIDs instead of ints
+type BaseModel struct {
+	ID        uuid.UUID `valid:"uuidv4" gorm:"type:uuid;primary_key;"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time `sql:"index"`
+}
+
+// BeforeCreate will set a UUID rather than numeric ID for the primary key
+func (bm *BaseModel) BeforeCreate(scope *gorm.Scope) error {
+	uuid := uuid.New()
+	return scope.SetColumn("ID", uuid)
+}
+
 // Connect opens and configures the sqlite DB using the recived configuration string
 func Connect(accessConnection string) *SQLiteStorage {
 	var err error
@@ -39,7 +57,8 @@ func Connect(accessConnection string) *SQLiteStorage {
 		panic("failed to connect database")
 	}
 	log.Infof("Connected to the DB: %v on %s", s.db, s.dbPath)
-
+	// Add logs for the schema changes
+	s.db.LogMode(true)
 	// Migrate the schema
 	s.db.AutoMigrate(&Roll{})
 	s.db.AutoMigrate(&Session{})
@@ -47,22 +66,21 @@ func Connect(accessConnection string) *SQLiteStorage {
 	s.db.AutoMigrate(&Character{})
 
 	// Create Indexes
+	// Player
 	s.db.Model(&Player{}).AddIndex("idx_player_name", "name")
+	s.db.Model(&Player{}).AddIndex("idx_player_username", "username")
+	// Session
+	s.db.Model(&Session{}).AddIndex("idx_session_name", "name")
+	// Character
 	s.db.Model(&Character{}).AddIndex("idx_character_name", "name")
+	// Roll
+	s.db.Model(&Roll{}).AddIndex("idx_roll_description", "description")
+	s.db.Model(&Roll{}).AddIndex("idx_roll_expression", "expression")
+	s.db.Model(&Roll{}).AddIndex("idx_roll_total", "total")
 
-	// Create
-	//db.Create(&Product{Code: "L1212", Price: 1000})
+	// Stop generation of logs
+	s.db.LogMode(false)
 
-	// Read
-	//var product Product
-	//db.First(&product, 1) // find product with id 1
-	//db.First(&product, "code = ?", "L1212") // find product with code l1212
-
-	// Update - update product's price to 2000
-	//db.Model(&product).Update("Price", 2000)
-
-	// Delete - delete product
-	//db.Delete(&product)
 	return s
 }
 

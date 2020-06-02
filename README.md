@@ -79,7 +79,10 @@ So to build the dockerimage you just need to run `make docker` or `make docker-c
 Improve tests
 
 ## References
-[Statically compiling Go programs](https://www.arp242.net/static-go.html)
+* [Statically compiling Go programs](https://www.arp242.net/static-go.html)
+* [GORM](https://gorm.io) Go ORM 
+  * [GORM Docs](https://gorm.io/docs)
+  * [https://medium.com/@the.hasham.ali/how-to-use-uuid-key-type-with-gorm-cc00d4ec7100](https://medium.com/@the.hasham.ali/how-to-use-uuid-key-type-with-gorm-cc00d4ec7100)
 
 ## License
 
