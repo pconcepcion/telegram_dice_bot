@@ -46,7 +46,6 @@ func (b *bot) handleMessage(m *tgbotapi.Message) string {
 	log.Debugf("Bot received command: %v", m)
 	log.Infof("Bot command: %v, arguments %v", m.Command(), m.CommandArguments())
 	activePlayer, err := b.getActivePlayer(m.From)
-	log.Debug("Active Player 0: ", activePlayer)
 	if err != nil {
 		log.Warn("Unable to get active player", err)
 		// TODO handle this gracefully
@@ -92,7 +91,6 @@ func (b *bot) handleMessage(m *tgbotapi.Message) string {
 		sessionName := m.CommandArguments()
 		response = b.handleRenameSession(m.Chat.ID, sessionName)
 	case "end_session":
-		// TODO: Generate session Summary
 		response = b.handleEndSession(m.Chat.ID)
 		return response
 	default:

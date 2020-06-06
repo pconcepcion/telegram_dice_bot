@@ -1,6 +1,9 @@
 package bot
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func (b *bot) handleStartSession(chatID int64, sessionName string) string {
 	var response string
@@ -36,15 +39,28 @@ func (b *bot) handleRenameSession(chatID int64, name string) string {
 
 func (b *bot) handleEndSession(chatID int64) string {
 	activeSession, ok := b.ActiveSessions[chatID]
+	var response strings.Builder
 	if ok == false {
-		response := fmt.Sprintf("Failed to rename Session, no active session found")
+		response.WriteString(fmt.Sprintf("Failed to rename Session, no active session found"))
 		log.Errorf("Failed to rename Session session not found: %d", chatID)
-		return response
+		return response.String()
 	}
 	log.Info("Closing Session: ", activeSession)
+	response.WriteString(fmt.Sprintf(label+" \\#session _\\#%s_ Finished\n", activeSession.Name))
+	// before closing the session get the summay
+	summary, err := b.storage.Summary(activeSession)
+	if err != nil {
+		log.Error(err)
+	}
+	if len(summary) > 0 {
+		response.WriteString("Player             \\| Expression \\| Rolls \\| Min  \\| Max  \\| Average       \n")
+		for _, sl := range summary {
+			response.WriteString(sl.String())
+		}
+		response.WriteString("\n")
+	}
 	b.storage.EndSession(activeSession)
 	delete(b.ActiveSessions, chatID)
-	response := fmt.Sprintf(label+" \\#session _\\#%s_ Finished", activeSession.Name)
-	log.Info(response)
-	return response
+	log.Info(response.String())
+	return response.String()
 }
