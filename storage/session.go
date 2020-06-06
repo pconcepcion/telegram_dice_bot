@@ -149,10 +149,10 @@ func (s *SummaryEntry) String() string {
 }
 
 // SummaryQuery is the raw query to obtain the summary data from the DB, use the username (or the name if the username is null)
-var SummaryQuery = `SELECT  (p.user_name, p.name) as username, r.expression, COUNT(r.expression) as numrolls,
+var SummaryQuery = `SELECT COALESCE(NULLIF(p.user_name,""), p.name) as username, r.expression, COUNT(r.expression) as numrolls,
 	MIN(r.total) as minimum, MAX(r.total) as maximum, AVG(r.total) as average
 	FROM rolls r join players p ON r.player_uuid = p.id AND r.session_uuid = ?
-	GROUP BY r.expression
+	GROUP BY username, r.expression
 	ORDER BY username, r.expression`
 
 // Summary get's the summary for a session
