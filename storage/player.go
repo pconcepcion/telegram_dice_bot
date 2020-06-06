@@ -29,17 +29,25 @@ type Player struct {
 	//`gorm:"many2many:player_sessions;"`
 }
 
+var (
+	//ErrNameOrUsernameMissing error marks when a user has neither name nor username
+	ErrNameOrUsernameMissing = errors.New("Name or Username Missing")
+)
+
 // Player get's a player from the storage or stores a new player and returns it
 func (sqliteStorage SQLiteStorage) Player(name string, username string, telegramUserID int, color string) (*Player, error) {
 	var player Player
 	//trimedcolor := valid.Trim(color, "") // Remove starting an tailing whitespace
 	validName, err := validations.ValidatePlayerName(name)
-	if err != nil {
+	if err != nil && validName != "" {
 		return nil, errors.Wrap(err, "Couldn't store player, invalid name")
 	}
 	validUserName, err := validations.ValidatePlayerName(username)
-	if err != nil {
+	if err != nil && validUserName != "" {
 		return nil, errors.Wrap(err, "Couldn't store player, invalid username")
+	}
+	if validName == "" && validUserName == "" {
+		return nil, ErrNameOrUsernameMissing
 	}
 	validColor, err := validations.ValidateColor(color)
 	if err != nil {
