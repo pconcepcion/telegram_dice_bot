@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -82,7 +85,7 @@ func (sqliteStorage *SQLiteStorage) RegisterRoll(expression, results, rawResults
 		log.Errorln("Missing player while storing a dice roll")
 		return ErrMissingPlayer
 	}
-	roll := Roll{PlayerTelegramID: player.UserTelegramID, Expression: expression, Results: results, RawResults: rawResults, Total: total}
+	roll := Roll{PlayerTelegramID: player.UserTelegramID, Expression: normalizeExpression(expression), Results: results, RawResults: rawResults, Total: total}
 	validRollMessage, err := validations.ValidateDescription(rollMessage)
 	if err != nil {
 		log.Warn("Invalid Description: ", err)
@@ -103,6 +106,15 @@ func (sqliteStorage *SQLiteStorage) RegisterRoll(expression, results, rawResults
 	return nil
 }
 
+// Normalize Expression normalizes the expresion to store it on the DB
+// So far it only adds a 1 when the number of dices was omited.
+func normalizeExpression(expression string) string {
+	if strings.HasPrefix(expression, "d") {
+		return "1" + expression
+	}
+	return expression
+}
+
 // AddPlayerToSessoionIfMissing adds a player to a session if it was not alredy included
 func (sqliteStorage *SQLiteStorage) AddPlayerToSessoionIfMissing(player *Player, session *Session) error {
 	for _, p := range session.Players {
@@ -117,4 +129,46 @@ func (sqliteStorage *SQLiteStorage) AddPlayerToSessoionIfMissing(player *Player,
 	// TODO: Error handling
 	log.Debugf("AddPlayerToSessoionIfMissing\nPlayer:\n %#v \nSession: %#v\n", player, session)
 	return nil
+}
+
+// SummaryEntry holds the data from an entry of the summary
+type SummaryEntry struct {
+	Username   string
+	Expression string
+	NumRolls   int `gorm:"column:numrolls"`
+	Minimum    int
+	Maximum    int
+	Average    float64
+}
+
+// String is the SummaryEntry Stringer
+func (s *SummaryEntry) String() string {
+	res := fmt.Sprintf("%15s  \\| %10s \\| %6d \\| %4d \\| %4d \\| %6f\n", s.Username, s.Expression, s.NumRolls, s.Minimum, s.Maximum, s.Average)
+	return strings.Replace(res, ".", "\\.", -1)
+
+}
+
+// SummaryQuery is the raw query to obtain the summary data from the DB, use the username (or the name if the username is null)
+var SummaryQuery = `SELECT  (p.user_name, p.name) as username, r.expression, COUNT(r.expression) as numrolls,
+	MIN(r.total) as minimum, MAX(r.total) as maximum, AVG(r.total) as average
+	FROM rolls r join players p ON r.player_uuid = p.id AND r.session_uuid = ?
+	GROUP BY r.expression
+	ORDER BY username, r.expression`
+
+// Summary get's the summary for a session
+func (sqliteStorage *SQLiteStorage) Summary(sesion *Session) (summary []SummaryEntry, err error) {
+	var summaryEntry SummaryEntry
+	var rows *sql.Rows
+	sqliteStorage.db.LogMode(true)
+	if rows, err = sqliteStorage.db.Raw(SummaryQuery, sesion.ID).Rows(); err != nil {
+		return nil, errors.Wrap(err, "Error obtaining summary. ")
+	}
+	log.Debugf("ROWS!! %#v", rows)
+	for rows.Next() {
+		sqliteStorage.db.ScanRows(rows, &summaryEntry)
+		log.Debugf("summaryEntry: %#v", summaryEntry)
+		summary = append(summary, summaryEntry)
+	}
+	sqliteStorage.db.LogMode(false)
+	return summary, nil
 }
